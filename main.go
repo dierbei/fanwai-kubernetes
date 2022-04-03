@@ -1,37 +1,35 @@
 package main
 
 import (
-	"context"
+	"bytes"
 	_ "embed"
+	"fmt"
 	"log"
-
-	"githup.com/dierbei/fanwai-kubernetes/config"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/yaml"
+	"os/exec"
 )
 
 //go:embed tpls/deploy.yaml
 var deployTpl string
 
 func main() {
-	dynamicClient := config.NewKubernetesConfig().InitDynamicClient()
-	deployGVR := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "v1",
-		Resource: "deployments",
-	}
+	//dynamicClient := config.NewKubernetesConfig().InitDynamicClient()
+	//deployGVR := schema.GroupVersionResource{
+	//	Group:    "apps",
+	//	Version:  "v1",
+	//	Resource: "deployments",
+	//}
 
-	var deployUnstructured = &unstructured.Unstructured{}
-	if err := yaml.Unmarshal([]byte(deployTpl), deployUnstructured); err != nil {
+	fmt.Println(kustomize("deploy"))
+}
+
+func kustomize(path string) string {
+	var buf = &bytes.Buffer{}
+	cmd := exec.Command("D:/Go1.17/bin/kustomize.exe", "build", path)
+	cmd.Stdout = buf
+
+	if err := cmd.Run(); err != nil {
 		log.Println(err)
 	}
 
-	_, err := dynamicClient.Resource(deployGVR).
-		Namespace(deployUnstructured.GetNamespace()).
-		Create(context.Background(), deployUnstructured, metav1.CreateOptions{})
-	if err != nil {
-		log.Println(err)
-	}
+	return buf.String()
 }

@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mygott
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: mygott
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mygott
+    spec:
+      containers:
+        - name: jtproxy
+          image: registry.cn-beijing.aliyuncs.com/jtthinkweb/mygo:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+      imagePullSecrets:
+        - name: img-secret
