@@ -6,8 +6,10 @@ import (
 	"log"
 
 	"githup.com/dierbei/fanwai-kubernetes/config"
+	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
 func main() {
@@ -18,8 +20,18 @@ func main() {
 		Resource: "deployments",
 	}
 
-	deployList, err := dynamicClient.Resource(deployGVR).List(context.Background(), metav1.ListOptions{})
+	deployUnstructuredList, err := dynamicClient.Resource(deployGVR).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
+		log.Println(err)
+	}
+
+	b, err := deployUnstructuredList.MarshalJSON()
+	if err != nil {
+		log.Println(err)
+	}
+
+	var deployList = &v1.DeploymentList{}
+	if err := json.Unmarshal(b, deployList); err != nil {
 		log.Println(err)
 	}
 

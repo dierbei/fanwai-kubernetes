@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	_kubernetesConfigPath = "resource/config"
+	_kubernetesConfigPath = "config/config"
 )
 
 type KubernetesConfig struct {
