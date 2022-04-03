@@ -2,15 +2,18 @@ package main
 
 import (
 	"context"
-	"fmt"
+	_ "embed"
 	"log"
 
 	"githup.com/dierbei/fanwai-kubernetes/config"
-	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
+
+//go:embed tpls/deploy.yaml
+var deployTpl string
 
 func main() {
 	dynamicClient := config.NewKubernetesConfig().InitDynamicClient()
@@ -20,22 +23,15 @@ func main() {
 		Resource: "deployments",
 	}
 
-	deployUnstructuredList, err := dynamicClient.Resource(deployGVR).List(context.Background(), metav1.ListOptions{})
+	var deployUnstructured = &unstructured.Unstructured{}
+	if err := yaml.Unmarshal([]byte(deployTpl), deployUnstructured); err != nil {
+		log.Println(err)
+	}
+
+	_, err := dynamicClient.Resource(deployGVR).
+		Namespace(deployUnstructured.GetNamespace()).
+		Create(context.Background(), deployUnstructured, metav1.CreateOptions{})
 	if err != nil {
 		log.Println(err)
-	}
-
-	b, err := deployUnstructuredList.MarshalJSON()
-	if err != nil {
-		log.Println(err)
-	}
-
-	var deployList = &v1.DeploymentList{}
-	if err := json.Unmarshal(b, deployList); err != nil {
-		log.Println(err)
-	}
-
-	for _, deploy := range deployList.Items {
-		fmt.Println(deploy.GetName())
 	}
 }
