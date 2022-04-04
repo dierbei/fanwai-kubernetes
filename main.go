@@ -1,17 +1,21 @@
 package main
 
 import (
+	"fmt"
+	"log"
+
 	"githup.com/dierbei/fanwai-kubernetes/config"
 	"githup.com/dierbei/fanwai-kubernetes/handler"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 )
 
 func main() {
 	clientSet := config.NewKubernetesConfig().InitClient()
 
+	// 监听资源
 	listWatch := cache.NewListWatchFromClient(
 		clientSet.CoreV1().RESTClient(),
 		"configmaps",
@@ -19,12 +23,39 @@ func main() {
 		fields.Everything(),
 	)
 
-	//_, infomer := cache.NewInformer(listWatch, &v1.ConfigMap{}, 0, handler.NewConfigMapHandler())
-	//infomer.Run(wait.NeverStop)
+	// 创建Indexer并使用
+	indexer := cache.Indexers{
+		cache.NamespaceIndex: cache.MetaNamespaceIndexFunc,
+		"app":                MetaAnnotationIndexFunc,
+	}
+	myIndexer, informer := cache.NewIndexerInformer(
+		listWatch,
+		&v1.ConfigMap{},
+		0,
+		handler.NewConfigMapHandler(),
+		indexer,
+	)
+	stopChan := make(chan struct{})
+	defer close(stopChan)
+	go informer.Run(stopChan)
 
-	sharedInformer := cache.NewSharedInformer(listWatch, &v1.ConfigMap{}, 0)
-	sharedInformer.AddEventHandler(handler.NewConfigMapHandler())
-	sharedInformer.AddEventHandler(handler.NewConfigMapV2Handler())
-	sharedInformer.Run(wait.NeverStop)
+	// 等待缓存同步
+	if !cache.WaitForCacheSync(stopChan, informer.HasSynced) {
+		log.Println("sync error")
+	}
+	fmt.Println(myIndexer.IndexKeys("app", "cm"))
+
 	select {}
+}
+
+// MetaAnnotationIndexFunc 根据annotations过滤
+func MetaAnnotationIndexFunc(obj interface{}) ([]string, error) {
+	meta, err := meta.Accessor(obj)
+	if err != nil {
+		return []string{""}, fmt.Errorf("object has no meta: %v", err)
+	}
+	if app, ok := meta.GetAnnotations()["app"]; ok {
+		return []string{app}, nil
+	}
+	return []string{}, nil
 }
