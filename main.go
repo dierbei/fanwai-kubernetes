@@ -29,12 +29,22 @@ func main() {
 	}
 
 	// 模拟序列化前端数据
-	frontPost := map[string]interface{}{
+	frontCotainer := map[string]interface{}{
 		"spec": map[string]interface{}{
-			"replicas": 2,
+			"template": map[string]interface{}{
+				"spec": map[string]interface{}{
+					"containers": []map[string]interface{}{
+						{
+							"name":  "redis",
+							"image": "redis:5-alpine",
+						},
+					},
+				},
+			},
 		},
 	}
-	b, err := json.Marshal(frontPost)
+
+	b, err := json.Marshal(frontCotainer)
 	if err != nil {
 		log.Println(err)
 	}
