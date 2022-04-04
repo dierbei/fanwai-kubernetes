@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"log"
 	"os/exec"
 
@@ -34,36 +36,48 @@ func AddJsonPatch(jps ...*JSONPatch) JSONPatchList {
 
 func main() {
 	// 动态客户端
-	//dynamicClient := config.NewKubernetesConfig().InitDynamicClient()
+	dynamicClient := config.NewKubernetesConfig().InitDynamicClient()
 	// 客户端
-	clientSet := config.NewKubernetesConfig().InitClient()
+	//clientSet := config.NewKubernetesConfig().InitClient()
 
 	// 是否存在对应deployment
-	_, err := clientSet.AppsV1().Deployments("default").Get(context.Background(), "my-nginx", metav1.GetOptions{})
-	if err != nil {
-		log.Println(err)
-	}
+	//_, err := clientSet.AppsV1().Deployments("default").Get(context.Background(), "my-nginx", metav1.GetOptions{})
+	//if err != nil {
+	//	log.Println(err)
+	//}
 
 	// 模拟序列化前端数据
 	list := AddJsonPatch(&JSONPatch{
-		Op:   "add",
-		Path: "/spec/template/spec/containers/1",
-		Value: map[string]interface{}{
-			"name":  "my-nginx",
-			"image": "nginx:1.18-alpine",
-		},
+		Op:   "remove",
+		Path: "/spec/template/spec/containers/0",
+		//Value: map[string]interface{}{
+		//	"name":  "my-nginx",
+		//	"image": "nginx:1.18-alpine",
+		//},
 	})
 	b, err := json.Marshal(list)
 	if err != nil {
 		log.Println(err)
 	}
 
-	// patch更新
-	_, err = clientSet.AppsV1().Deployments("default").
+	gvr := schema.GroupVersionResource{
+		Resource: "deployments",
+		Version:  "v1",
+		Group:    "apps",
+	}
+	_, err = dynamicClient.Resource(gvr).Namespace("default").
 		Patch(context.Background(), "my-nginx", types.JSONPatchType, b, metav1.PatchOptions{})
 	if err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
+	fmt.Println("动态客户端patch成功")
+
+	// patch更新
+	//_, err = clientSet.AppsV1().Deployments("default").
+	//	Patch(context.Background(), "my-nginx", types.JSONPatchType, b, metav1.PatchOptions{})
+	//if err != nil {
+	//	log.Println(err)
+	//}
 }
 
 func kustomize(path string) string {
