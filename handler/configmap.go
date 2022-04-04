@@ -23,3 +23,21 @@ func (*ConfigMapHandler) OnUpdate(oldObj, newObj interface{}) {
 func (*ConfigMapHandler) OnDelete(obj interface{}) {
 	fmt.Println("delete: ", obj.(*v1.ConfigMap).Name)
 }
+
+type ConfigMapV2Handler struct {
+}
+
+func NewConfigMapV2Handler() *ConfigMapV2Handler {
+	return &ConfigMapV2Handler{}
+}
+
+func (*ConfigMapV2Handler) OnAdd(obj interface{}) {
+	fmt.Println("v2 add: ", obj.(*v1.ConfigMap).Name)
+}
+
+func (*ConfigMapV2Handler) OnUpdate(oldObj, newObj interface{}) {
+}
+
+func (*ConfigMapV2Handler) OnDelete(obj interface{}) {
+	fmt.Println("v2 delete: ", obj.(*v1.ConfigMap).Name)
+}
