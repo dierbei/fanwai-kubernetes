@@ -16,6 +16,22 @@ import (
 //go:embed tpls/deploy.yaml
 var deployTpl string
 
+type JSONPatch struct {
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value,omitempty"`
+}
+
+type JSONPatchList []*JSONPatch
+
+func AddJsonPatch(jps ...*JSONPatch) JSONPatchList {
+	list := make([]*JSONPatch, len(jps))
+	for index, jp := range jps {
+		list[index] = jp
+	}
+	return list
+}
+
 func main() {
 	// 动态客户端
 	//dynamicClient := config.NewKubernetesConfig().InitDynamicClient()
@@ -29,29 +45,22 @@ func main() {
 	}
 
 	// 模拟序列化前端数据
-	frontCotainer := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"containers": []map[string]interface{}{
-						{
-							"name":  "redis",
-							"image": "redis:5-alpine",
-						},
-					},
-				},
-			},
+	list := AddJsonPatch(&JSONPatch{
+		Op:   "add",
+		Path: "/spec/template/spec/containers/1",
+		Value: map[string]interface{}{
+			"name":  "my-nginx",
+			"image": "nginx:1.18-alpine",
 		},
-	}
-
-	b, err := json.Marshal(frontCotainer)
+	})
+	b, err := json.Marshal(list)
 	if err != nil {
 		log.Println(err)
 	}
 
 	// patch更新
 	_, err = clientSet.AppsV1().Deployments("default").
-		Patch(context.Background(), "my-nginx", types.StrategicMergePatchType, b, metav1.PatchOptions{})
+		Patch(context.Background(), "my-nginx", types.JSONPatchType, b, metav1.PatchOptions{})
 	if err != nil {
 		log.Println(err)
 	}
