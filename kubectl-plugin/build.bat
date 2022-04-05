@@ -1,0 +1,1 @@
+go build -o D:\Go1.17\bin\kubectl-pods.exe main.go
