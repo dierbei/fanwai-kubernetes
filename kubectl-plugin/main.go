@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/tidwall/gjson"
+	corev1 "k8s.io/api/core/v1"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -42,6 +46,11 @@ func run(c *cobra.Command, args []string) error {
 		return err
 	}
 
+	name, err := c.Flags().GetString("name")
+	if err != nil {
+		return err
+	}
+
 	if ns == "" {
 		ns = "default"
 	}
@@ -62,9 +71,12 @@ func run(c *cobra.Command, args []string) error {
 	table.SetHeader(header)
 
 	for _, pod := range list.Items {
-		var row = []string{pod.Name, pod.Namespace, pod.Status.PodIP, string(pod.Status.Phase)}
-		if showlabels {
-			row = append(row, lib.ShowLabels(pod.Labels))
+		var row []string
+		if name != "" {
+			row, err = NameRegex(pod, showlabels, name)
+
+		} else {
+			row = RenderData(pod, showlabels)
 		}
 		table.Append(row)
 	}
@@ -84,4 +96,30 @@ func run(c *cobra.Command, args []string) error {
 	table.Render() // Send output
 
 	return nil
+}
+
+func NameRegex(pod corev1.Pod, showlabels bool, name string) ([]string, error) {
+	var row []string
+
+	b, err := json.Marshal(pod)
+	if err != nil {
+		return nil, err
+	}
+	ret := gjson.Get(string(b), "metadata.name")
+
+	for _, r := range ret.Array() {
+		if m, err := regexp.MatchString(name, r.String()); err == nil && m {
+			row = RenderData(pod, showlabels)
+		}
+	}
+
+	return row, nil
+}
+
+func RenderData(pod corev1.Pod, showlabels bool) []string {
+	var row = []string{pod.Name, pod.Namespace, pod.Status.PodIP, string(pod.Status.Phase)}
+	if showlabels {
+		row = append(row, lib.ShowLabels(pod.Labels))
+	}
+	return row
 }
