@@ -37,12 +37,18 @@ func run(c *cobra.Command, args []string) error {
 		return err
 	}
 
+	fields, err := c.Flags().GetString("fields")
+	if err != nil {
+		return err
+	}
+
 	if ns == "" {
 		ns = "default"
 	}
 
 	list, err := client.CoreV1().Pods(ns).List(context.Background(), v1.ListOptions{
 		LabelSelector: labels,
+		FieldSelector: fields,
 	})
 	if err != nil {
 		return err

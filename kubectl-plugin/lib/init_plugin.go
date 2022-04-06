@@ -32,6 +32,7 @@ func MergeFlags(cmd *cobra.Command) {
 	cfgFlags.AddFlags(cmd.Flags())
 	cmd.Flags().Bool("showlabels", false, "kubectl pods --showlabels 显示标签")
 	cmd.Flags().String("labels", "", "kubectl pods --labels 根据标签过滤")
+	cmd.Flags().String("fields", "", "kubectl pods --fields=\"status.phase=Running\"") // 参考链接: https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/v1/conversion.go
 }
 
 // RunCmd 执行命令
