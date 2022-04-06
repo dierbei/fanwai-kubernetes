@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -29,6 +30,8 @@ func InitClient() *kubernetes.Clientset {
 // MergeFlags 合并命令
 func MergeFlags(cmd *cobra.Command) {
 	cfgFlags.AddFlags(cmd.Flags())
+	cmd.Flags().Bool("showlabels", false, "kubectl pods --showlabels 显示标签")
+	cmd.Flags().String("labels", "", "kubectl pods --labels 根据标签过滤")
 }
 
 // RunCmd 执行命令
@@ -38,11 +41,19 @@ func RunCmd(f func(c *cobra.Command, args []string) error) error {
 		Short:        "获取Pod列表",
 		Example:      "kubectl pods [flags]",
 		SilenceUsage: true,
-		RunE: f,
+		RunE:         f,
 	}
 	MergeFlags(cmd)
 	if err := cmd.Execute(); err != nil {
 		return err
 	}
 	return nil
+}
+
+func ShowLabels(labels map[string]string) string {
+	var ret string
+	for k, v := range labels {
+		ret +=fmt.Sprintf("%s=%s\n", k, v)
+	}
+	return ret
 }
