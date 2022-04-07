@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -11,6 +10,12 @@ import (
 
 var (
 	cfgFlags = &genericclioptions.ConfigFlags{}
+	client   = InitClient()
+
+	showLabels bool
+	labels     string
+	fields     string
+	name       string
 )
 
 // InitClient 初始化Kubernetes客户端
@@ -27,35 +32,34 @@ func InitClient() *kubernetes.Clientset {
 	return client
 }
 
-// MergeFlags 合并命令
-func MergeFlags(cmd *cobra.Command) {
-	cfgFlags.AddFlags(cmd.Flags())
-	cmd.Flags().Bool("showlabels", false, "kubectl pods --showlabels 显示标签")
-	cmd.Flags().String("labels", "", "kubectl pods --labels 根据标签过滤")
-	cmd.Flags().String("fields", "", "kubectl pods --fields=\"status.phase=Running\"") // 参考链接: https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/v1/conversion.go
-	cmd.Flags().String("name", "", "kubectl pods --name=\"^my\"") // github.com/tidwall/gjson
-}
-
-// RunCmd 执行命令
-func RunCmd(f func(c *cobra.Command, args []string) error) error {
+// RunCmd 运行命令
+func RunCmd() error {
 	cmd := &cobra.Command{
 		Use:          "kubectl pods [flags]",
-		Short:        "获取Pod列表",
+		Short:        "list pods",
 		Example:      "kubectl pods [flags]",
 		SilenceUsage: true,
-		RunE:         f,
 	}
-	MergeFlags(cmd)
-	if err := cmd.Execute(); err != nil {
-		return err
-	}
-	return nil
+
+	// 合并K8s命令
+	mergeFlags(cmd, listCmd, promptCmd)
+
+	// 加入子命令
+	cmd.AddCommand(listCmd, promptCmd)
+
+	// 自定义参数
+	cmd.Flags().BoolVar(&showLabels, "showlabels", false, "kubectl pods --showlabels 显示标签")
+	cmd.Flags().StringVar(&labels, "labels", "", "kubectl pods --labels 根据标签过滤")
+	cmd.Flags().StringVar(&fields, "fields", "", "kubectl pods --fields=\"status.phase=Running\"") // 参考链接: https://github.com/kubernetes/kubernetes/blob/master/pkg/apis/core/v1/conversion.go
+	cmd.Flags().StringVar(&name, "name", "", "kubectl pods --name=\"^my\"")                        // github.com/tidwall/gjson
+
+	// 执行命令
+	return cmd.Execute()
 }
 
-func ShowLabels(labels map[string]string) string {
-	var ret string
-	for k, v := range labels {
-		ret +=fmt.Sprintf("%s=%s\n", k, v)
+// mergeFlags 合并K8s命令
+func mergeFlags(cmds ...*cobra.Command) {
+	for _, cmd := range cmds {
+		cfgFlags.AddFlags(cmd.Flags())
 	}
-	return ret
 }
