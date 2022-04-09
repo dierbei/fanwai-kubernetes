@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/c-bata/go-prompt"
@@ -57,5 +58,26 @@ func completer(in prompt.Document) []prompt.Suggest {
 	if w == "" {
 		return []prompt.Suggest{}
 	}
+	cmd, prefix := parseCmd(in.TextBeforeCursor())
+	if cmd == "get" {
+		return prompt.FilterHasPrefix(podSuggestions, prefix, true)
+	}
 	return prompt.FilterHasPrefix(suggestions, w, true)
+}
+
+// parseCmd 解析命令
+// 例如：（get    my）==>（get my）多空格替换
+func parseCmd(w string) (cmd string, suggestPrefix string) {
+	w = regexp.MustCompile("\\s+").ReplaceAllString(w, " ")
+	cmdSlice := strings.Split(w, " ")
+	if len(cmdSlice) >= 2 {
+		return cmdSlice[0], strings.Join(cmdSlice[1:], " ")
+	}
+	return "", ""
+}
+
+var podSuggestions = []prompt.Suggest{
+	{"ngx-123", "ngx"},
+	{"ngx-mygin", "mygin"},
+	{"javapod-xxx", "javapod"},
 }
