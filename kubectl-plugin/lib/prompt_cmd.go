@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// 参考链接：https://github.com/c-bata/go-prompt
 // kubectl pods prompt
 var promptCmd = &cobra.Command{
 	Use:          "prompt",
@@ -36,7 +38,10 @@ func executorCmd(cmd *cobra.Command) func(in string) {
 			fmt.Println("bye bye")
 			os.Exit(0)
 		case "list":
-			listCmd.RunE(cmd, []string{})
+			InitSharedInformerFactory()
+			if err := cacheCmd.RunE(cmd, []string{}); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
