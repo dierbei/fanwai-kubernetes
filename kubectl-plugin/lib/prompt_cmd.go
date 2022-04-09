@@ -1,7 +1,9 @@
 package lib
 
 import (
+	"errors"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"log"
 	"os"
@@ -37,13 +39,18 @@ func executorCmd(cmd *cobra.Command) func(in string) {
 	return func(in string) {
 		in = strings.TrimSpace(in)
 		blocks := strings.Split(in, " ")
+		args := blocks[1:]
 		switch blocks[0] {
 		case "exit":
 			fmt.Println("bye bye")
 			os.Exit(0)
 		case "list":
 			if err := cacheCmd.RunE(cmd, []string{}); err != nil {
-				log.Fatal(err)
+				log.Println(err)
+			}
+		case "get":
+			if err := getPod(cmd, args); err != nil {
+				log.Println(err)
 			}
 		}
 	}
@@ -65,6 +72,34 @@ func completer(in prompt.Document) []prompt.Suggest {
 		return prompt.FilterHasPrefix(getPodList(), prefix, true)
 	}
 	return prompt.FilterHasPrefix(suggestions, w, true)
+}
+
+// getPod 获取Pod信息，输出yaml到标准输出
+func getPod(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return errors.New("无效的Pod名字")
+	}
+
+	ns, err := cmd.Flags().GetString("namespace")
+	if err != nil {
+		return err
+	}
+	if ns == "" {
+		ns = "default"
+	}
+
+	pod, err := fact.Core().V1().Pods().Lister().Pods(ns).Get(args[0])
+	if err != nil {
+		return err
+	}
+
+	b, err := yaml.Marshal(pod)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(b))
+
+	return nil
 }
 
 // getPodList 获取Pod的信息
