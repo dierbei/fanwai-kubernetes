@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"log"
 	"os"
 	"regexp"
@@ -19,6 +20,8 @@ var promptCmd = &cobra.Command{
 	Example:      "kubectl pods prompt",
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		InitSharedInformerFactory()
+
 		p := prompt.New(
 			executorCmd(cmd),
 			completer,
@@ -39,7 +42,6 @@ func executorCmd(cmd *cobra.Command) func(in string) {
 			fmt.Println("bye bye")
 			os.Exit(0)
 		case "list":
-			InitSharedInformerFactory()
 			if err := cacheCmd.RunE(cmd, []string{}); err != nil {
 				log.Fatal(err)
 			}
@@ -60,9 +62,26 @@ func completer(in prompt.Document) []prompt.Suggest {
 	}
 	cmd, prefix := parseCmd(in.TextBeforeCursor())
 	if cmd == "get" {
-		return prompt.FilterHasPrefix(podSuggestions, prefix, true)
+		return prompt.FilterHasPrefix(getPodList(), prefix, true)
 	}
 	return prompt.FilterHasPrefix(suggestions, w, true)
+}
+
+// getPodList 获取Pod的信息
+func getPodList() []prompt.Suggest {
+	podList, err := fact.Core().V1().Pods().Lister().Pods("default").List(k8slabels.Everything())
+	if err != nil {
+		log.Println(err)
+	}
+
+	var suggests []prompt.Suggest
+	for i := 0; i < len(podList); i++ {
+		suggests = append(suggests, prompt.Suggest{
+			Text:        podList[i].Name,
+			Description: "节点:" + podList[i].Spec.NodeName + " 状态:" + string(podList[i].Status.Phase) + " IP:" + podList[i].Status.PodIP,
+		})
+	}
+	return suggests
 }
 
 // parseCmd 解析命令
