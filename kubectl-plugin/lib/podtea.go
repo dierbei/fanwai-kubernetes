@@ -65,6 +65,8 @@ func (m podModel) View() string {
 	return s
 }
 
+const PodEventType = "__event__"
+
 func runTea(args []string, cmd *cobra.Command) {
 	if len(args) == 0 {
 		log.Println("请填写有效的pod名称")
@@ -84,6 +86,7 @@ func runTea(args []string, cmd *cobra.Command) {
 		&podJson{title: "注解", path: "metadata.annotations"},
 		&podJson{title: "容器", path: "spec"},
 		&podJson{title: "全部", path: "@this"},
+		&podJson{title: "*事件*", path: PodEventType},
 	)
 
 	teaCmd := tea.NewProgram(podModel)
