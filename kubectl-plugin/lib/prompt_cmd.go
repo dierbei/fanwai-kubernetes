@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v2"
-	k8slabels "k8s.io/apimachinery/pkg/labels"
 	"log"
 	"os"
 	"regexp"
@@ -49,9 +48,8 @@ func executorCmd(cmd *cobra.Command) func(in string) {
 				log.Println(err)
 			}
 		case "get":
-			if err := getPod(cmd, args); err != nil {
-				log.Println(err)
-			}
+			// 传递pod name， cmd（获取namespace），初始化一个tea并运行。当按下enter根据ns、name、path查询信息
+			runTea(args, cmd)
 		}
 	}
 }
@@ -102,23 +100,6 @@ func getPod(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getPodList 获取Pod的信息
-func getPodList() []prompt.Suggest {
-	podList, err := fact.Core().V1().Pods().Lister().Pods("default").List(k8slabels.Everything())
-	if err != nil {
-		log.Println(err)
-	}
-
-	var suggests []prompt.Suggest
-	for i := 0; i < len(podList); i++ {
-		suggests = append(suggests, prompt.Suggest{
-			Text:        podList[i].Name,
-			Description: "节点:" + podList[i].Spec.NodeName + " 状态:" + string(podList[i].Status.Phase) + " IP:" + podList[i].Status.PodIP,
-		})
-	}
-	return suggests
-}
-
 // parseCmd 解析命令
 // 例如：（get    my）==>（get my）多空格替换
 func parseCmd(w string) (cmd string, suggestPrefix string) {
@@ -128,10 +109,4 @@ func parseCmd(w string) (cmd string, suggestPrefix string) {
 		return cmdSlice[0], strings.Join(cmdSlice[1:], " ")
 	}
 	return "", ""
-}
-
-var podSuggestions = []prompt.Suggest{
-	{"ngx-123", "ngx"},
-	{"ngx-mygin", "mygin"},
-	{"javapod-xxx", "javapod"},
 }
