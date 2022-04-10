@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"log"
 
 	"github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
 	k8slabels "k8s.io/apimachinery/pkg/labels"
-	"sigs.k8s.io/yaml"
 )
 
 func ShowLabels(labels map[string]string) string {
@@ -59,29 +57,28 @@ func getPodDetailByJson(podName, path string, cmd *cobra.Command) error {
 		return err
 	}
 
-	fmt.Println(string(jsonStr))
-
 	resultData := gjson.Get(string(jsonStr), path)
 	if !resultData.Exists() {
-		return errors.New("无法找到对应内容")
+		return errors.New("无法找到对应内容, " + path)
 	}
 
+	fmt.Println(resultData.Raw)
 	// 结果不是对象、数组，直接打印
-	if !resultData.IsObject() && !resultData.IsArray() {
-		fmt.Println(resultData.Raw)
-		return nil
-	}
+	//if !resultData.IsObject() && !resultData.IsArray() {
+	//	fmt.Println(resultData.Raw)
+	//	return nil
+	//}
 
 	// 试试能不能进行yaml转换
-	var tempMap = map[string]interface{}{}
-	if err := yaml.Unmarshal([]byte(resultData.Raw), tempMap); err != nil {
-		return err
-	}
-	b, err := yaml.Marshal(tempMap)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(b))
+	//var tempMap = map[string]interface{}{}
+	//if err := yaml.Unmarshal([]byte(resultData.Raw), tempMap); err != nil {
+	//	return err
+	//}
+	//b, err := yaml.Marshal(tempMap)
+	//if err != nil {
+	//	return err
+	//}
+	//fmt.Println(string(b))
 
 	return nil
 }

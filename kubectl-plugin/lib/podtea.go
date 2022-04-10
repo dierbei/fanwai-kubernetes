@@ -80,6 +80,9 @@ func runTea(args []string, cmd *cobra.Command) {
 
 	podModel.items = append(podModel.items,
 		&podJson{title: "元信息", path: "metadata"},
+		&podJson{title: "标签", path: "metadata.labels"},
+		&podJson{title: "注解", path: "metadata.annotations"},
+		&podJson{title: "容器", path: "spec"},
 		&podJson{title: "全部", path: "@this"},
 	)
 
